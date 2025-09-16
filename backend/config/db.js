@@ -9,7 +9,9 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  // Atualiza a configuração SSL para incluir o CA
   ssl: {
+    ca: process.env.DB_SSL_CA,
     rejectUnauthorized: true 
   }
 });
