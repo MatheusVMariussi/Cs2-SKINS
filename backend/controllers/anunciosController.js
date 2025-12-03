@@ -1,54 +1,51 @@
 const db = require('../config/db');
 
-// Listar todos os anúncios (com opção de filtros e paginação)
 const getAllAnuncios = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 12;
     const offset = (page - 1) * limit;
     
-    // Condições de filtro
     const conditions = [];
     const params = [];
+    let paramIndex = 1;
     
     if (req.query.arma && req.query.arma !== '') {
-      conditions.push('arma = ?');
+      conditions.push(`arma = $${paramIndex++}`);
       params.push(req.query.arma);
     }
     
     if (req.query.raridade && req.query.raridade !== '') {
-      conditions.push('raridade = ?');
+      conditions.push(`raridade = $${paramIndex++}`);
       params.push(req.query.raridade);
     }
     
     if (req.query.minPrice && req.query.minPrice !== '') {
-      conditions.push('valor >= ?');
+      conditions.push(`valor >= $${paramIndex++}`);
       params.push(parseFloat(req.query.minPrice));
     }
     
     if (req.query.maxPrice && req.query.maxPrice !== '') {
-      conditions.push('valor <= ?');
+      conditions.push(`valor <= $${paramIndex++}`);
       params.push(parseFloat(req.query.maxPrice));
     }
     
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     
     // Consultar total de registros (para paginação)
-    const [countResult] = await db.query(
+    const countResult = await db.query(
       `SELECT COUNT(*) as total FROM anuncios ${whereClause}`,
       params
     );
-    const total = countResult[0].total;
+    const total = parseInt(countResult.rows[0].total);
     const totalPages = Math.ceil(total / limit);
     
     // Consultar registros com paginação
-    const countParams = [...params];
-    params.push(offset, limit);
+    // Postgres sintaxe: LIMIT $limit OFFSET $offset
+    const query = `SELECT * FROM anuncios ${whereClause} ORDER BY data_anuncio DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    params.push(limit, offset);
     
-    const [anuncios] = await db.query(
-      `SELECT * FROM anuncios ${whereClause} ORDER BY data_anuncio DESC LIMIT ?, ?`,
-      params
-    );
+    const { rows: anuncios } = await db.query(query, params);
     
     res.status(200).json({
       anuncios,
@@ -68,16 +65,16 @@ const getAnuncioById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const [anuncio] = await db.query(
-      'SELECT * FROM anuncios WHERE id = ?',
+    const { rows } = await db.query(
+      'SELECT * FROM anuncios WHERE id = $1',
       [id]
     );
     
-    if (anuncio.length === 0) {
+    if (rows.length === 0) {
       return res.status(404).json({ message: 'Anúncio não encontrado' });
     }
     
-    res.status(200).json(anuncio[0]);
+    res.status(200).json(rows[0]);
   } catch (error) {
     console.error('Erro ao buscar anúncio:', error);
     res.status(500).json({ message: 'Erro ao buscar anúncio' });
@@ -98,20 +95,17 @@ const createAnuncio = async (req, res) => {
       vendedor 
     } = req.body;
     
-    const [result] = await db.query(
+    // Postgres usa RETURNING id para devolver o ID gerado imediatamente
+    const { rows } = await db.query(
       `INSERT INTO anuncios 
        (nome_skin, arma, raridade, valor, floatSkin, descricao, imagem_url, vendedor) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
       [nome_skin, arma, raridade, valor, floatSkin, descricao, imagem_url, vendedor]
     );
     
-    if (result.affectedRows === 0) {
-      return res.status(400).json({ message: 'Falha ao criar anúncio' });
-    }
-    
     res.status(201).json({ 
       message: 'Anúncio criado com sucesso',
-      id: result.insertId
+      id: rows[0].id
     });
   } catch (error) {
     console.error('Erro ao criar anúncio:', error);
@@ -134,33 +128,28 @@ const updateAnuncio = async (req, res) => {
       vendedor 
     } = req.body;
     
-    // Verificar se o anúncio existe
-    const [anuncioExistente] = await db.query(
-      'SELECT id FROM anuncios WHERE id = ?',
+    const { rows } = await db.query(
+      'SELECT id FROM anuncios WHERE id = $1',
       [id]
     );
     
-    if (anuncioExistente.length === 0) {
+    if (rows.length === 0) {
       return res.status(404).json({ message: 'Anúncio não encontrado' });
     }
     
-    const [result] = await db.query(
+    const result = await db.query(
       `UPDATE anuncios SET 
-       nome_skin = ?, 
-       arma = ?, 
-       raridade = ?, 
-       valor = ?, 
-       floatSkin = ?, 
-       descricao = ?, 
-       imagem_url = ?, 
-       vendedor = ? 
-       WHERE id = ?`,
+       nome_skin = $1, 
+       arma = $2, 
+       raridade = $3, 
+       valor = $4, 
+       floatSkin = $5, 
+       descricao = $6, 
+       imagem_url = $7, 
+       vendedor = $8 
+       WHERE id = $9`,
       [nome_skin, arma, raridade, valor, floatSkin, descricao, imagem_url, vendedor, id]
     );
-    
-    if (result.affectedRows === 0) {
-      return res.status(400).json({ message: 'Falha ao atualizar anúncio' });
-    }
     
     res.status(200).json({ message: 'Anúncio atualizado com sucesso' });
   } catch (error) {
@@ -174,23 +163,13 @@ const deleteAnuncio = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Verificar se o anúncio existe
-    const [anuncioExistente] = await db.query(
-      'SELECT id FROM anuncios WHERE id = ?',
+    const { rowCount } = await db.query(
+      'DELETE FROM anuncios WHERE id = $1',
       [id]
     );
     
-    if (anuncioExistente.length === 0) {
+    if (rowCount === 0) {
       return res.status(404).json({ message: 'Anúncio não encontrado' });
-    }
-    
-    const [result] = await db.query(
-      'DELETE FROM anuncios WHERE id = ?',
-      [id]
-    );
-    
-    if (result.affectedRows === 0) {
-      return res.status(400).json({ message: 'Falha ao excluir anúncio' });
     }
     
     res.status(200).json({ message: 'Anúncio excluído com sucesso' });
