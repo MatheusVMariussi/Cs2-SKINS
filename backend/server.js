@@ -11,12 +11,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rota de teste
+// Rota de teste (Importante para verificar se a API subiu)
 app.get('/', (req, res) => {
-  res.json({ message: 'API do MinhasSkins funcionando!' });
+  res.send({ 
+    message: 'API MinhasSkins rodando!', 
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Rotas
+// Rotas da API
 app.use('/api/anuncios', anunciosRoutes);
 
 // Tratamento de erros para rotas inexistentes
@@ -24,18 +27,20 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Rota não encontrada' });
 });
 
-// Middleware de tratamento de erros
+// Middleware de tratamento de erros global
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Erro no servidor:', err);
   res.status(500).json({ 
     message: 'Erro interno do servidor',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
-// Inicia o servidor
+// Só abre a porta se estiver rodando localmente (npm run dev)
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
   });
 }
+
+module.exports = app;
