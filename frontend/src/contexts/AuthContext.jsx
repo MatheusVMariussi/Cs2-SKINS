@@ -8,12 +8,10 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Flag para evitar atualizações em componentes desmontados
     let mounted = true;
 
     const initAuth = async () => {
       try {
-        // Verificação de segurança: O cliente existe?
         if (!supabase) {
           console.error("ERRO CRÍTICO: Cliente Supabase não inicializado.");
           if (mounted) setLoading(false);
@@ -21,12 +19,9 @@ export const AuthProvider = ({ children }) => {
         }
 
         const response = await supabase.auth.getSession();
-        
-        // Verifica se 'response' e 'data' existem antes de ler a sessão
         const session = response?.data?.session;
 
         if (mounted) {
-          // Se tiver sessão, pega o user. Se não, null.
           setUser(session?.user ?? null);
         }
       } catch (error) {
@@ -39,7 +34,6 @@ export const AuthProvider = ({ children }) => {
     initAuth();
 
     const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`Auth event: ${event}`);
       if (mounted) {
         setUser(session?.user ?? null);
         setLoading(false);
@@ -54,15 +48,22 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  // Funções de ação (Login/Register/Logout)
   const login = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     return data;
   };
 
-  const register = async (email, password) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+  const register = async (email, password, fullName) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        },
+      },
+    });
     if (error) throw error;
     return data;
   };
