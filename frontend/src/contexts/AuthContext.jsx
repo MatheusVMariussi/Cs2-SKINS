@@ -8,36 +8,66 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar sessão atual ao carregar
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      setLoading(false);
+    let mounted = true;
+
+    const initAuth = async () => {
+      try {
+        if (!supabase) {
+          console.error("Supabase client não inicializado. Verifique suas variáveis de ambiente.");
+          setLoading(false);
+          return;
+        }
+
+        const response = await supabase.auth.getSession();
+        
+        // Verifica se data existe antes de tentar acessar session
+        const session = response?.data?.session;
+        
+        if (mounted) {
+          setUser(session?.user ?? null);
+        }
+      } catch (error) {
+        console.error("Erro fatal na inicialização do Auth:", error);
+      } finally {
+        if (mounted) setLoading(false);
+      }
     };
 
-    checkUser();
+    initAuth();
 
-    // Ouvir mudanças (login, logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
+    const authListener = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (mounted) {
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    // Função de limpeza segura
+    return () => {
+      mounted = false;
+      // Verifica se a subscription existe antes de tentar cancelar
+      if (authListener && authListener.data && authListener.data.subscription) {
+        authListener.data.subscription.unsubscribe();
+      }
+    };
   }, []);
 
   const login = async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    return data;
   };
 
   const register = async (email, password) => {
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
+    return data;
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    setUser(null);
   };
 
   return (
