@@ -19,28 +19,27 @@ function Header() {
   return (
     <header className="bg-gray-900 text-white shadow-lg border-b border-gray-800">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        {/* Logo */}
         <Link to="/" className="text-2xl font-bold text-orange-500 hover:text-orange-400 transition-colors">
           MinhasSkins
         </Link>
         
-        {/* Menu Desktop */}
         <nav className="hidden md:flex items-center space-x-8">
           <Link to="/" className="hover:text-orange-400 transition-colors font-medium">
             Home
           </Link>
           
-          <Link to="/anunciar" className="hover:text-orange-400 transition-colors font-medium">
-            Anunciar Skin
-          </Link>
+          {user && (
+            <Link to="/anunciar" className="hover:text-orange-400 transition-colors font-medium">
+              Anunciar Skin
+            </Link>
+          )}
 
-          {/* Divisor */}
           <div className="h-6 w-px bg-gray-700"></div>
 
           {user ? (
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-300">
-                Olá, <span className="text-white font-semibold">{user.email?.split('@')[0]}</span>
+                Olá, <span className="text-white font-semibold">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span>
               </span>
               <button 
                 onClick={handleLogout}
@@ -64,7 +63,7 @@ function Header() {
           )}
         </nav>
 
-        {/* Menu Mobile (Hamburguer) */}
+        {/* Menu Mobile */}
         <div className="md:hidden">
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -81,19 +80,19 @@ function Header() {
         </div>
       </div>
 
-      {/* Dropdown Mobile */}
       {isMenuOpen && (
         <div className="md:hidden bg-gray-800 px-4 pt-2 pb-4 space-y-3 border-t border-gray-700">
           <Link to="/" className="block text-gray-300 hover:text-white py-2">Home</Link>
-          <Link to="/anunciar" className="block text-gray-300 hover:text-white py-2">Anunciar Skin</Link>
+          
+          {/* PROTEÇÃO VISUAL MOBILE */}
+          {user && (
+            <Link to="/anunciar" className="block text-gray-300 hover:text-white py-2">Anunciar Skin</Link>
+          )}
           
           {user ? (
             <div className="pt-4 border-t border-gray-700">
               <p className="text-sm text-gray-400 mb-2">Logado como {user.email}</p>
-              <button 
-                onClick={handleLogout}
-                className="w-full text-left text-red-400 hover:text-red-300 py-2"
-              >
+              <button onClick={handleLogout} className="w-full text-left text-red-400 hover:text-red-300 py-2">
                 Sair
               </button>
             </div>
