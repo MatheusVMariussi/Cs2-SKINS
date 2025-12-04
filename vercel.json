@@ -20,15 +20,15 @@
     },
     {
       "source": "/assets/(.*)",
-      "destination": "/frontend/assets/$1"
+      "destination": "/assets/$1"
     },
     {
       "source": "/favicon.ico",
-      "destination": "/frontend/favicon.ico"
+      "destination": "/favicon.ico"
     },
     {
       "source": "/(.*)",
-      "destination": "/frontend/index.html"
+      "destination": "/index.html"
     }
   ]
 }
