@@ -8,26 +8,29 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Flag para evitar atualizações em componentes desmontados
     let mounted = true;
 
     const initAuth = async () => {
       try {
+        // Verificação de segurança: O cliente existe?
         if (!supabase) {
-          console.error("Supabase client não inicializado. Verifique suas variáveis de ambiente.");
-          setLoading(false);
+          console.error("ERRO CRÍTICO: Cliente Supabase não inicializado.");
+          if (mounted) setLoading(false);
           return;
         }
 
         const response = await supabase.auth.getSession();
         
-        // Verifica se data existe antes de tentar acessar session
+        // Verifica se 'response' e 'data' existem antes de ler a sessão
         const session = response?.data?.session;
-        
+
         if (mounted) {
+          // Se tiver sessão, pega o user. Se não, null.
           setUser(session?.user ?? null);
         }
       } catch (error) {
-        console.error("Erro fatal na inicialização do Auth:", error);
+        console.error("Erro ao inicializar autenticação:", error);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -35,23 +38,23 @@ export const AuthProvider = ({ children }) => {
 
     initAuth();
 
-    const authListener = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`Auth event: ${event}`);
       if (mounted) {
         setUser(session?.user ?? null);
         setLoading(false);
       }
     });
 
-    // Função de limpeza segura
     return () => {
       mounted = false;
-      // Verifica se a subscription existe antes de tentar cancelar
-      if (authListener && authListener.data && authListener.data.subscription) {
-        authListener.data.subscription.unsubscribe();
+      if (data && data.subscription) {
+        data.subscription.unsubscribe();
       }
     };
   }, []);
 
+  // Funções de ação (Login/Register/Logout)
   const login = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
