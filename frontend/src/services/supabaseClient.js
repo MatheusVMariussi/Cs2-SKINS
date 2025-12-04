@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Adicione essas variáveis no .env do frontend ou nas configurações da Vercel
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_KEY;
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+if (!supabaseUrl || !supabaseKey) {
+    console.error("ERRO CRÍTICO: VITE_SUPABASE_URL ou KEY faltando!");
+}
+
+export const supabase = createClient(supabaseUrl || '', supabaseKey || '');
