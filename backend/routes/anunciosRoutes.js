@@ -1,13 +1,14 @@
-const express = require('express');
-const router = express.Router();
-const anunciosController = require('../controllers/anunciosController');
-const { validateAnuncio } = require('../middlewares/validationMiddleware');
+const router = require('express').Router();
+const controller = require('../controllers/anunciosController');
+const authMiddleware = require('../middlewares/authMiddleware');
 
-// Rotas para anúncios
-router.get('/', anunciosController.getAllAnuncios);
-router.get('/:id', anunciosController.getAnuncioById);
-router.post('/', validateAnuncio, anunciosController.createAnuncio);
-router.put('/:id', validateAnuncio, anunciosController.updateAnuncio);
-router.delete('/:id', anunciosController.deleteAnuncio);
+// Rotas PÚBLICAS (Qualquer um vê)
+router.get('/', controller.getAllAnuncios);
+router.get('/:id', controller.getAnuncioById);
+
+// Rotas PROTEGIDAS (Só logado mexe)
+router.post('/', authMiddleware, controller.createAnuncio);
+router.put('/:id', authMiddleware, controller.updateAnuncio);
+router.delete('/:id', authMiddleware, controller.deleteAnuncio);
 
 module.exports = router;

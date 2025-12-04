@@ -85,22 +85,17 @@ const getAnuncioById = async (req, res) => {
 const createAnuncio = async (req, res) => {
   try {
     const { 
-      nome_skin, 
-      arma, 
-      raridade, 
-      valor, 
-      floatSkin, 
-      descricao, 
-      imagem_url, 
-      vendedor 
+      nome_skin, arma, raridade, valor, floatSkin, descricao, imagem_url 
     } = req.body;
     
-    // Postgres usa RETURNING id para devolver o ID gerado imediatamente
+    const userId = req.user.id;
+    const userEmail = req.user.email;
+    
     const { rows } = await db.query(
       `INSERT INTO anuncios 
-       (nome_skin, arma, raridade, valor, floatSkin, descricao, imagem_url, vendedor) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-      [nome_skin, arma, raridade, valor, floatSkin, descricao, imagem_url, vendedor]
+       (nome_skin, arma, raridade, valor, floatSkin, descricao, imagem_url, vendedor, user_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+      [nome_skin, arma, raridade, valor, floatSkin, descricao, imagem_url, userEmail, userId]
     );
     
     res.status(201).json({ 
@@ -117,6 +112,8 @@ const createAnuncio = async (req, res) => {
 const updateAnuncio = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
+    
     const { 
       nome_skin, 
       arma, 
@@ -124,12 +121,12 @@ const updateAnuncio = async (req, res) => {
       valor, 
       floatSkin, 
       descricao, 
-      imagem_url, 
-      vendedor 
+      imagem_url 
     } = req.body;
     
+    // Verificar se o anúncio existe e PERTENCE ao usuário
     const { rows } = await db.query(
-      'SELECT id FROM anuncios WHERE id = $1',
+      'SELECT user_id FROM anuncios WHERE id = $1',
       [id]
     );
     
@@ -137,6 +134,12 @@ const updateAnuncio = async (req, res) => {
       return res.status(404).json({ message: 'Anúncio não encontrado' });
     }
     
+    // Se o dono do anúncio for diferente do usuário logado: CAI FORA.
+    if (rows[0].user_id !== userId) {
+      return res.status(403).json({ message: 'Você não tem permissão para alterar este anúncio' });
+    }
+    
+    // Atualizar (Sintaxe Postgres $1, $2...)
     const result = await db.query(
       `UPDATE anuncios SET 
        nome_skin = $1, 
@@ -145,11 +148,15 @@ const updateAnuncio = async (req, res) => {
        valor = $4, 
        floatSkin = $5, 
        descricao = $6, 
-       imagem_url = $7, 
-       vendedor = $8 
-       WHERE id = $9`,
-      [nome_skin, arma, raridade, valor, floatSkin, descricao, imagem_url, vendedor, id]
+       imagem_url = $7
+       WHERE id = $8`,
+      [nome_skin, arma, raridade, valor, floatSkin, descricao, imagem_url, id]
     );
+    
+    // No Postgres, result.rowCount diz quantas linhas foram afetadas
+    if (result.rowCount === 0) {
+      return res.status(400).json({ message: 'Falha ao atualizar anúncio' });
+    }
     
     res.status(200).json({ message: 'Anúncio atualizado com sucesso' });
   } catch (error) {
@@ -162,15 +169,24 @@ const updateAnuncio = async (req, res) => {
 const deleteAnuncio = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
     
-    const { rowCount } = await db.query(
-      'DELETE FROM anuncios WHERE id = $1',
+    // Primeiro verifica se o anúncio pertence ao usuário
+    const { rows } = await db.query(
+      'SELECT user_id FROM anuncios WHERE id = $1',
       [id]
     );
     
-    if (rowCount === 0) {
+    if (rows.length === 0) {
       return res.status(404).json({ message: 'Anúncio não encontrado' });
     }
+    
+    if (rows[0].user_id !== userId) {
+      return res.status(403).json({ message: 'Você não tem permissão para excluir este anúncio' });
+    }
+    
+    // Se passou, deleta
+    await db.query('DELETE FROM anuncios WHERE id = $1', [id]);
     
     res.status(200).json({ message: 'Anúncio excluído com sucesso' });
   } catch (error) {
