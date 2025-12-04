@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getAnuncioById, deleteAnuncio } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 function DetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
   const [anuncio, setAnuncio] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,12 +33,10 @@ function DetailsPage() {
     try {
       await deleteAnuncio(id);
       setShowDeleteModal(false);
-      // Mostrar mensagem de sucesso
       alert('Anúncio excluído com sucesso!');
-      // Redirecionar para a página inicial
       navigate('/');
     } catch (err) {
-      alert('Erro ao excluir anúncio. Por favor, tente novamente.');
+      alert('Erro ao excluir anúncio. Verifique se você tem permissão.');
       setShowDeleteModal(false);
     }
   };
@@ -70,121 +71,137 @@ function DetailsPage() {
 
   if (error || !anuncio) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 text-red-700 p-4 rounded-lg text-center my-4">
+      <div className="container mx-auto px-4 py-8 text-center">
+        <div className="bg-red-900/50 text-red-200 p-4 rounded-lg my-4 inline-block">
           {error || 'Anúncio não encontrado.'}
         </div>
-        <div className="text-center mt-4">
-          <Link to="/" className="text-orange-500 hover:underline">
-            Voltar para a página inicial
-          </Link>
+        <div className="mt-4">
+          <Link to="/" className="text-orange-500 hover:underline">Voltar para Home</Link>
         </div>
       </div>
     );
   }
 
+  const isOwner = user && anuncio.user_id && user.id === anuncio.user_id;
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-4">
         <Link to="/" className="text-orange-500 hover:underline flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Voltar para a lista de anúncios
+          ← Voltar para a lista
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+      <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700">
         <div className="md:flex">
-          <div className="md:w-1/2">
+          {/* Imagem */}
+          <div className="md:w-1/2 bg-gray-900 flex items-center justify-center p-4">
             <img
-              src={anuncio.imagem_url || 'https://via.placeholder.com/600x400?text=Sem+Imagem'}
+              src={anuncio.imagem_url}
               alt={`${anuncio.arma} | ${anuncio.nome_skin}`}
-              className="w-full h-full object-cover"
+              className="max-h-[400px] object-contain hover:scale-105 transition-transform duration-300"
               onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = 'https://via.placeholder.com/600x400?text=Erro+ao+carregar';
+                e.target.src = 'https://via.placeholder.com/600x400?text=Imagem+Indisponível';
               }}
             />
           </div>
           
-          <div className="md:w-1/2 p-6">
-            <div className="flex justify-between items-start">
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                {anuncio.arma} | {anuncio.nome_skin}
-              </h1>
-              <span className={`px-3 py-1 rounded-full text-sm ${getRarityColorClass(anuncio.raridade)}`}>
-                {anuncio.raridade}
-              </span>
-            </div>
-            
-            <div className="mt-6">
-              <div className="text-3xl font-bold text-orange-500 mb-4">
+          {/* Detalhes */}
+          <div className="md:w-1/2 p-8 flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-white mb-1">
+                    {anuncio.nome_skin}
+                  </h1>
+                  <p className="text-xl text-gray-400">{anuncio.arma}</p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${getRarityColorClass(anuncio.raridade)}`}>
+                  {anuncio.raridade}
+                </span>
+              </div>
+              
+              <div className="text-4xl font-bold text-orange-500 mb-6">
                 {formatCurrency(anuncio.valor)}
               </div>
               
-              <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+              <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-sm mb-8 bg-gray-900/50 p-4 rounded-lg">
                 <div>
-                  <span className="text-gray-500">Float:</span>
-                  <span className="ml-2 font-medium">{anuncio.floatSkin}</span>
+                  <span className="block text-gray-500 text-xs uppercase">Float</span>
+                  <span className="font-mono text-white">{anuncio.floatSkin}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Data do anúncio:</span>
-                  <span className="ml-2 font-medium">
+                  <span className="block text-gray-500 text-xs uppercase">Anunciado em</span>
+                  <span className="text-white">
                     {new Date(anuncio.data_anuncio).toLocaleDateString('pt-BR')}
                   </span>
                 </div>
-                <div>
-                  <span className="text-gray-500">Vendedor:</span>
-                  <span className="ml-2 font-medium">{anuncio.vendedor}</span>
+                <div className="col-span-2">
+                  <span className="block text-gray-500 text-xs uppercase">Vendedor</span>
+                  <span className="text-white font-medium flex items-center">
+                    <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+                    {anuncio.vendedor}
+                  </span>
                 </div>
               </div>
               
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-2">Descrição</h3>
-                <p className="text-gray-700">{anuncio.descricao || 'Sem descrição disponível.'}</p>
+              <div className="mb-8">
+                <h3 className="text-sm font-bold text-gray-300 uppercase mb-2">Descrição</h3>
+                <p className="text-gray-400 leading-relaxed">
+                  {anuncio.descricao || 'O vendedor não adicionou uma descrição.'}
+                </p>
               </div>
-              
-              <div className="flex space-x-3">
+            </div>
+
+            {/* Renderização Condicional */}
+            {isOwner ? (
+              <div className="flex space-x-3 pt-6 border-t border-gray-700">
                 <Link
                   to={`/editar-anuncio/${anuncio.id}`}
-                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md text-center transition-colors"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-md text-center font-bold transition-colors"
                 >
-                  Editar Anúncio
+                  Editar
                 </Link>
                 <button
                   onClick={() => setShowDeleteModal(true)}
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-md transition-colors"
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-md font-bold transition-colors"
                 >
-                  Excluir Anúncio
+                  Excluir
                 </button>
               </div>
-            </div>
+            ) : (
+               <div className="pt-6 border-t border-gray-700">
+                 <button className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-md font-bold transition-colors shadow-lg shadow-green-900/20">
+                   Comprar Agora
+                 </button>
+               </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Modal de confirmação de exclusão */}
+      {/* Modal de confirmação (mantido igual, apenas ajustado estilos) */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-            <h3 className="text-lg font-bold mb-4">Confirmar exclusão</h3>
-            <p className="mb-6">
-              Tem certeza que deseja excluir o anúncio "{anuncio.arma} | {anuncio.nome_skin}"? 
-              Esta ação não pode ser desfeita.
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full border border-gray-700 shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-4">Confirmar exclusão</h3>
+            <p className="text-gray-300 mb-6">
+              Tem certeza que deseja apagar o anúncio <strong>{anuncio.nome_skin}</strong>? 
+              <br/><br/>
+              <span className="text-red-400 text-sm">Essa ação é irreversível.</span>
             </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md"
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-md font-medium"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-bold"
               >
-                Excluir
+                Confirmar Exclusão
               </button>
             </div>
           </div>

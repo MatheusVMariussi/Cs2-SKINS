@@ -21,7 +21,7 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/anuncio/:id" element={<DetailsPage />} />
-              <Route path="/novo-anuncio" element={<FormPage />} />
+              <Route path="/anunciar" element={<FormPage />} />
               <Route path="/editar-anuncio/:id" element={<FormPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
