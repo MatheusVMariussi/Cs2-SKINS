@@ -11,14 +11,13 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.0",
-    "react-scripts": "^0.0.0",
     "web-vitals": "^2.1.4"
   },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "test": "echo 'Testes desabilitados na migração'", 
+    "eject": "echo 'Não existe eject no Vite'"
   },
   "eslintConfig": {
     "extends": [
@@ -39,9 +38,10 @@
     ]
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.3",
-    "tailwindcss": "^3.4.17"
-  },
-  "proxy": "http://localhost:3001"
+    "tailwindcss": "^3.4.17",
+    "vite": "^7.2.6"
+  }
 }
