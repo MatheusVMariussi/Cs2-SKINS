@@ -19,16 +19,12 @@
       "destination": "/backend/server.js"
     },
     {
-      "source": "/static/(.*)",
-      "destination": "/frontend/static/$1"
+      "source": "/assets/(.*)",
+      "destination": "/frontend/assets/$1"
     },
     {
       "source": "/favicon.ico",
       "destination": "/frontend/favicon.ico"
-    },
-    {
-      "source": "/manifest.json",
-      "destination": "/frontend/manifest.json"
     },
     {
       "source": "/(.*)",
